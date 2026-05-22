@@ -2,7 +2,7 @@
   "name": "Love Catcher - For Nisrin",
   "short_name": "Love Catcher",
   "description": "A magical Disney-themed love catching game for Nisrin from Han",
-  "start_url": "./game.html",
+  "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#1a0a2e",

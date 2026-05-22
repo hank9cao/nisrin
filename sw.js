@@ -1,6 +1,6 @@
 const CACHE_NAME = 'love-catcher-v1';
 const ASSETS = [
-    './game.html',
+    './index.html',
     './icon.svg',
     './manifest.json'
 ];

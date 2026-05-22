@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0a2e"/>
+      <stop offset="100%" style="stop-color:#2d1b69"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="80" fill="url(#bg)"/>
+  <!-- Mickey head -->
+  <circle cx="256" cy="280" r="90" fill="#1a1a1a"/>
+  <circle cx="190" cy="200" r="55" fill="#1a1a1a"/>
+  <circle cx="322" cy="200" r="55" fill="#1a1a1a"/>
+  <!-- Heart -->
+  <path d="M256 350 C220 310 180 290 180 260 C180 235 200 220 225 220 C245 220 256 235 256 235 C256 235 267 220 287 220 C312 220 332 235 332 260 C332 290 292 310 256 350Z" fill="#ff4080"/>
+  <!-- Stars -->
+  <circle cx="130" cy="380" r="8" fill="#ffd700"/>
+  <circle cx="382" cy="380" r="8" fill="#ffd700"/>
+  <circle cx="256" cy="420" r="6" fill="#ffd700"/>
+</svg>

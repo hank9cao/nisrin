@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a0a2e">
+    <meta name="apple-mobile-web-app-title" content="Love Catcher">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <title>Nisrin's Love Catcher ♥</title>
+    <link href="https://fonts.googleapis.com/css2?family=Satisfy&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #1a0a2e; font-family: 'Quicksand', sans-serif; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; height: 100dvh; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; }
+        canvas { border-radius: 12px; box-shadow: 0 0 40px rgba(255, 100, 150, 0.3), 0 0 80px rgba(100, 50, 200, 0.2); display: block; touch-action: none; }
+        #ui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 10; }
+        #start-screen, #game-over { display: none; pointer-events: all; }
+        #start-screen h1 { font-family: 'Satisfy', cursive; font-size: 3rem; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.5); margin-bottom: 10px; }
+        #start-screen p, #game-over p { color: rgba(255,255,255,0.7); margin: 8px 0; font-size: 1rem; }
+        #game-over h2 { font-family: 'Satisfy', cursive; font-size: 2.5rem; color: #ff6b9d; text-shadow: 0 0 15px rgba(255,100,150,0.5); }
+        #game-over .score-display { font-size: 1.5rem; color: #ffd700; margin: 15px 0; }
+        .btn { background: linear-gradient(135deg, #ff6b9d, #c44dff); border: none; color: #fff; padding: 14px 40px; font-size: 1.1rem; font-family: 'Quicksand', sans-serif; font-weight: 700; border-radius: 30px; cursor: pointer; margin-top: 20px; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 20px rgba(200,50,150,0.4); pointer-events: all; }
+        .btn:hover { transform: scale(1.05); box-shadow: 0 6px 30px rgba(200,50,150,0.6); }
+    </style>
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="ui">
+        <div id="start-screen">
+            <h1>Love Catcher</h1>
+            <p>For Nisrin — with love from Han</p>
+            <p style="margin-top:15px; color:rgba(255,255,255,0.5); font-size:0.85rem;">Catch hearts ♥ and stars ✦ to score<br>Avoid the storm clouds ☁</p>
+            <button class="btn" onclick="startGame()">Play ♥</button>
+        </div>
+        <div id="game-over">
+            <h2>Beautiful!</h2>
+            <div class="score-display">Score: <span id="final-score">0</span></div>
+            <p id="love-msg"></p>
+            <button class="btn" onclick="startGame()">Play Again ♥</button>
+        </div>
+    </div>
+    <script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const CW = 480, CH = 640;
+canvas.width = CW; canvas.height = CH;
+
+// Scale canvas for mobile
+function scaleCanvas() {
+    const s = Math.min(window.innerWidth / CW, window.innerHeight / CH) * 0.95;
+    canvas.style.width = CW * s + 'px';
+    canvas.style.height = CH * s + 'px';
+}
+scaleCanvas();
+window.addEventListener('resize', scaleCanvas);
+
+let state = 'menu'; // menu, playing, over
+let score, lives, items, sparkles, time, speed, playerX, playerVX, combo;
+const PLAYER_Y = CH - 60;
+const loveMsgs = ["You are my whole world!", "Every heartbeat is for you!", "My love grows infinite!", "You make magic real!", "Forever & always yours!"];
+
+document.getElementById('start-screen').style.display = 'block';
+
+function startGame() {
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('game-over').style.display = 'none';
+    score = 0; lives = 5; items = []; sparkles = []; time = 0; speed = 1; playerX = CW / 2; playerVX = 0; combo = 0;
+    state = 'playing';
+}
+
+// Input
+let inputX = null;
+canvas.addEventListener('mousemove', e => { const r = canvas.getBoundingClientRect(); inputX = (e.clientX - r.left) / (r.width / CW); });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); const r = canvas.getBoundingClientRect(); inputX = (e.touches[0].clientX - r.left) / (r.width / CW); }, {passive:false});
+canvas.addEventListener('touchstart', e => { e.preventDefault(); const r = canvas.getBoundingClientRect(); inputX = (e.touches[0].clientX - r.left) / (r.width / CW); }, {passive:false});
+
+function spawnItem() {
+    const rand = Math.random();
+    let type, size, pts;
+    if (rand < 0.5) { type = 'heart'; size = 22; pts = 10; }
+    else if (rand < 0.75) { type = 'star'; size = 18; pts = 25; }
+    else if (rand < 0.88) { type = 'mickey'; size = 20; pts = 50; }
+    else { type = 'cloud'; size = 28; pts = 0; }
+    items.push({ x: 30 + Math.random() * (CW - 60), y: -30, type, size, pts, vy: 1.5 + Math.random() * speed, rotation: 0, wobble: Math.random() * Math.PI * 2 });
+}
+
+function addSparkles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        sparkles.push({ x, y, vx: Math.cos(a) * (1 + Math.random() * 3), vy: Math.sin(a) * (1 + Math.random() * 3), life: 1, color, size: 2 + Math.random() * 3 });
+    }
+}
+
+function drawMickey(x, y, s, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x - s * 0.75, y - s * 0.75, s * 0.55, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + s * 0.75, y - s * 0.75, s * 0.55, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawHeart(x, y, s) {
+    ctx.save(); ctx.translate(x, y);
+    ctx.beginPath();
+    ctx.moveTo(0, s * 0.3);
+    ctx.bezierCurveTo(-s, -s * 0.3, -s * 0.5, -s, 0, -s * 0.5);
+    ctx.bezierCurveTo(s * 0.5, -s, s, -s * 0.3, 0, s * 0.3);
+    ctx.fillStyle = '#ff4080';
+    ctx.shadowColor = '#ff4080'; ctx.shadowBlur = 10;
+    ctx.fill(); ctx.restore();
+}
+
+function drawStar(x, y, s, color) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(time * 0.05);
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+        const a = (i * 4 * Math.PI / 5) - Math.PI / 2;
+        const method = i === 0 ? 'moveTo' : 'lineTo';
+        ctx[method](Math.cos(a) * s, Math.sin(a) * s);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color || '#ffd700';
+    ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 8;
+    ctx.fill(); ctx.restore();
+}
+
+function drawCloud(x, y, s) {
+    ctx.save(); ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#3a3a5a';
+    ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x - s * 0.7, y + 4, s * 0.7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + s * 0.7, y + 4, s * 0.7, 0, Math.PI * 2); ctx.fill();
+    // Lightning
+    ctx.strokeStyle = '#8080aa'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x - 3, y + s); ctx.lineTo(x + 2, y + s + 8); ctx.lineTo(x - 1, y + s + 8); ctx.lineTo(x + 4, y + s + 16); ctx.stroke();
+    ctx.restore();
+}
+
+function drawPlayer() {
+    const bobY = Math.sin(time * 0.08) * 2;
+    const y = PLAYER_Y + bobY;
+    // Body (basket/cup shape)
+    ctx.save();
+    ctx.fillStyle = '#ff2255';
+    ctx.beginPath();
+    ctx.moveTo(playerX - 28, y - 5);
+    ctx.quadraticCurveTo(playerX - 30, y + 20, playerX - 22, y + 22);
+    ctx.lineTo(playerX + 22, y + 22);
+    ctx.quadraticCurveTo(playerX + 30, y + 20, playerX + 28, y - 5);
+    ctx.closePath();
+    ctx.fill();
+    // Polka dots
+    ctx.fillStyle = '#fff';
+    [[-12, 8], [0, 12], [12, 8], [-6, 18], [8, 18]].forEach(([dx, dy]) => {
+        ctx.beginPath(); ctx.arc(playerX + dx, y + dy, 2.5, 0, Math.PI * 2); ctx.fill();
+    });
+    // Mickey ears on basket
+    drawMickey(playerX, y - 12, 10, '#1a1a1a');
+    // Bow
+    ctx.fillStyle = '#ff2255';
+    ctx.beginPath(); ctx.ellipse(playerX - 8, y - 4, 6, 4, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(playerX + 8, y - 4, 6, 4, 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#cc0033';
+    ctx.beginPath(); ctx.arc(playerX, y - 4, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+}
+
+function drawHUD() {
+    ctx.fillStyle = '#ffd700'; ctx.font = '700 18px Quicksand';
+    ctx.textAlign = 'left';
+    ctx.fillText('Score: ' + score, 15, 30);
+    ctx.textAlign = 'right';
+    // Lives as hearts
+    for (let i = 0; i < lives; i++) {
+        drawHeart(CW - 20 - i * 28, 25, 10);
+    }
+    // Combo
+    if (combo > 2) {
+        ctx.textAlign = 'center'; ctx.fillStyle = '#c44dff'; ctx.font = '700 14px Quicksand';
+        ctx.fillText('Combo x' + combo + '!', CW / 2, 30);
+    }
+}
+
+function drawBG() {
+    // Gradient sky
+    const grad = ctx.createLinearGradient(0, 0, 0, CH);
+    grad.addColorStop(0, '#0f0025');
+    grad.addColorStop(0.6, '#1f1050');
+    grad.addColorStop(1, '#2a1560');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, CW, CH);
+    // Stars
+    ctx.fillStyle = 'rgba(255,215,0,0.4)';
+    for (let i = 0; i < 40; i++) {
+        const sx = (i * 137.5 + time * 0.02) % CW;
+        const sy = (i * 97.3) % (CH * 0.5);
+        const alpha = 0.2 + Math.sin(time * 0.03 + i) * 0.2;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath(); ctx.arc(sx, sy, 1, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // Ground
+    ctx.fillStyle = '#120830';
+    ctx.fillRect(0, CH - 30, CW, 30);
+    ctx.fillStyle = '#2a1060';
+    ctx.fillRect(0, CH - 30, CW, 2);
+}
+
+function update() {
+    if (state !== 'playing') return;
+    time++;
+    speed = 1 + time * 0.0005;
+
+    // Spawn
+    const spawnRate = Math.max(20, 50 - time * 0.02);
+    if (time % Math.floor(spawnRate) === 0) spawnItem();
+
+    // Player movement
+    if (inputX !== null) {
+        const target = Math.max(30, Math.min(CW - 30, inputX));
+        playerX += (target - playerX) * 0.12;
+    }
+
+    // Items
+    for (let i = items.length - 1; i >= 0; i--) {
+        const item = items[i];
+        item.y += item.vy;
+        item.rotation += 0.03;
+        item.wobble += 0.05;
+        item.x += Math.sin(item.wobble) * 0.3;
+
+        // Collision with player
+        const dx = item.x - playerX;
+        const dy = item.y - PLAYER_Y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 35) {
+            if (item.type === 'cloud') {
+                lives--;
+                combo = 0;
+                addSparkles(item.x, item.y, '#6666aa', 8);
+                items.splice(i, 1);
+                if (lives <= 0) gameOver();
+            } else {
+                combo++;
+                const bonus = combo > 3 ? combo : 1;
+                score += item.pts * bonus;
+                const colors = { heart: '#ff4080', star: '#ffd700', mickey: '#c44dff' };
+                addSparkles(item.x, item.y, colors[item.type], 12);
+                items.splice(i, 1);
+            }
+            continue;
+        }
+
+        // Missed
+        if (item.y > CH + 30) {
+            if (item.type !== 'cloud') { combo = 0; }
+            items.splice(i, 1);
+        }
+    }
+
+    // Sparkles
+    for (let i = sparkles.length - 1; i >= 0; i--) {
+        const s = sparkles[i];
+        s.x += s.vx; s.y += s.vy; s.vy += 0.1; s.life -= 0.03;
+        if (s.life <= 0) sparkles.splice(i, 1);
+    }
+}
+
+function render() {
+    drawBG();
+    if (state === 'playing' || state === 'over') {
+        // Items
+        items.forEach(item => {
+            if (item.type === 'heart') drawHeart(item.x, item.y, item.size);
+            else if (item.type === 'star') drawStar(item.x, item.y, item.size);
+            else if (item.type === 'mickey') { ctx.save(); ctx.shadowColor = '#c44dff'; ctx.shadowBlur = 12; drawMickey(item.x, item.y, item.size * 0.6, '#c44dff'); ctx.restore(); }
+            else if (item.type === 'cloud') drawCloud(item.x, item.y, item.size);
+        });
+        drawPlayer();
+        // Sparkles
+        sparkles.forEach(s => {
+            ctx.save(); ctx.globalAlpha = s.life;
+            ctx.fillStyle = s.color;
+            ctx.beginPath(); ctx.arc(s.x, s.y, s.size * s.life, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        });
+        drawHUD();
+    }
+}
+
+function gameOver() {
+    state = 'over';
+    document.getElementById('final-score').textContent = score;
+    document.getElementById('love-msg').textContent = loveMsgs[Math.floor(Math.random() * loveMsgs.length)];
+    document.getElementById('game-over').style.display = 'block';
+}
+
+function loop() {
+    update();
+    render();
+    requestAnimationFrame(loop);
+}
+loop();
+
+// Register Service Worker for PWA / offline support
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+    </script>
+</body>
+</html>

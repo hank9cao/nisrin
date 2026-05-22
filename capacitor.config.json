@@ -1,0 +1,11 @@
+{
+  "appId": "com.han.lovecatcher",
+  "appName": "Love Catcher",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
